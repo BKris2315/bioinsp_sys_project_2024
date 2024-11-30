@@ -19,6 +19,8 @@
 *** for contributors-url, forks-url, etc. This is an optional, concise syntax you may use.
 *** https://www.markdownguide.org/basic-syntax/#reference-style-links
 -->
+[![MIT License][license-shield]][license-url]
+[![LinkedIn][linkedin-shield]][linkedin-url]
 
 
 
@@ -85,8 +87,8 @@ Use the `BLANK_README.md` to get started.
 <a id="built-with"></a>
 ### Built With
 
-  [![Python][Python]][Python-url]
-  [![Jupyter][Jupyter]][Jupyter-url]
+* [![Python][Python]][Python-url]
+* [![Jupyter][Jupyter]][Jupyter-url]
 
 
 <p align="right">(<a href="#readme-top">back to top</a>)</p>
@@ -163,7 +165,8 @@ Project Link: [https://github.com/BKris2315/bioinsp_sys_project_2024/](https://g
 
 <!-- MARKDOWN LINKS & IMAGES -->
 <!-- https://www.markdownguide.org/basic-syntax/#reference-style-links -->
-
+[license-shield]: https://img.shields.io/github/license/othneildrew/Best-README-Template.svg?style=for-the-badge
+[license-url]: https://github.com/BKris2315/bioinsp_sys_project_2024/tree/master?tab=MIT-1-ov-file#readme
 [linkedin-shield]: https://img.shields.io/badge/-LinkedIn-black.svg?style=for-the-badge&logo=linkedin&colorB=555
 [linkedin-url]: https://www.linkedin.com/in/krist%C3%B3f-benedek-10a78b153/
 [product-screenshot]: images/screenshot.png
