@@ -1,0 +1,10 @@
+numpy
+igraph
+networkx
+matplotlib
+scipy
+tqdm
+numba
+hydra
+omegaconf
+typing
