@@ -98,10 +98,10 @@ class NetworkAnalyzer:
         Returns:
             ig.CairoPlot: The generated plot object.
         """
-        assert (len(vertex_color) == graph.vcount()) or (len(vertex_color) == 1),  "vertex_color must match the number of vertices."
-        assert (len(edge_color) == graph.ecount()) or (len(edge_color) == 1), "edge_color must match the number of edges."
-        assert (len(edge_width) == graph.ecount()) or (len(edge_width) == 1), "edge_width must match the number of edges."
-        assert (vertex_label is None) or (isinstance(vertex_label, List) and len(vertex_label) == graph.vcount()), "vertex_label must match the number of vertices."
+        # assert (len(vertex_color) == 1) or (len(vertex_color) == graph.vcount()),  "vertex_color must match the number of vertices."
+        # assert (len(edge_color) == 1) or (len(edge_color) == graph.ecount()), "edge_color must match the number of edges."
+        # assert (len(edge_width) == 1) or (len(edge_width) == graph.ecount()), "edge_width must match the number of edges."
+        # assert (vertex_label is None) or (isinstance(vertex_label, List) and len(vertex_label) == graph.vcount()), "vertex_label must match the number of vertices."
         
         if layout is None:
             pos = graph.layout_auto()
@@ -236,4 +236,160 @@ class NetworkAnalyzer:
                                 load_centrality[node] += 1 / total_paths
 
         return load_centrality
+    
+    @classmethod
+    def calculate_centrality_measures(cls, graph: ig.Graph, method: str):
+        """
+        Calculate and print all centrality measures implemented in igraph.
+
+        Parameters:
+            graph (igraph.Graph): The input graph for centrality calculation.
+            method (str): The centrality measure to calculate. Supported methods are:
+                - 'centrality': Degree centrality.
+                - 'closeness': Closeness centrality.
+                - 'betweenness': Betweenness centrality.
+                - 'eigenvector': Eigenvector centrality.
+                - 'pagerank': PageRank centrality.
+                - 'harmonic': Harmonic centrality.
+                - 'load': Load centrality.
+                - 'katz': Katz centrality.
+
+        Returns:
+            dict: A dictionary containing centrality measures for all nodes.
+        """
+
+        if method == 'centrality':
+            centrality = graph.degree()
+        elif method == 'closeness':
+            centrality = graph.closeness(normalized=True)
+        elif method == 'betweenness':
+            centrality = graph.betweenness(vertices=None, directed=False, weights=None, cutoff=None)
+        elif method == 'eigenvector':
+            centrality = graph.eigenvector_centrality(directed=False, scale=True, weights=None, return_eigenvalue=False)
+        elif method == 'pagerank':
+            centrality = graph.pagerank(directed=False, damping=0.85, weights=None, arpack_options=None)
+        elif method == 'harmonic':
+            centrality = graph.harmonic_centrality(vertices=None, mode='ALL', weights=None)
+        elif method == 'load':
+            centrality = cls.calculate_load_centrality(graph)
+        elif method == 'katz':
+            centrality = cls.calculate_katz_centrality(graph)
+        else:
+            print(f"Centrality not supported/implemented for {method}")
+
+        return centrality
+    
+    @staticmethod
+    def plot_adjacency_matrix(graph, 
+                              node_quantity: np.ndarray = None, 
+                              label: str = 'Non', 
+                              lang: str = 'eng', 
+                              format: str = 'png', 
+                              block: int = 0, 
+                              mem: np.ndarray = np.array([None]), 
+                              no_ticks: bool = 0):
+        """
+        Plots the adjacency matrix of a given graph, with optional clustering and localization color overlay.
+
+        Parameters:
+            graph (igraph.Graph): Input graph object.
+            node_quantity (numpy.ndarray): Node quantity for which cmap to be done.
+            label (str): Label for the plot title and saved file (default: 'Non').
+            lang (str): Language for the plot title ('eng' for English, 'hu' for Hungarian) (default: 'eng').
+            format (str): Format to save the plot (e.g., 'png', 'jpg') (default: 'png').
+            block (int): If non-zero, enables block plotting with clustering (default: 0).
+            mem (numpy.ndarray): Membership array for clustering (default: array([None])).
+            no_ticks (bool): If non-zero, removes axis ticks (default: 0).
+
+        Returns:
+            tuple: Contains the x and y coordinates, sorted indices, membership, and connected nodes.
+        """
+        colormap = plt.cm.copper
+
+        def save_plot(title, file_name):
+            plt.title(title)
+            plt.tight_layout()
+            plt.savefig(file_name, format=format, dpi = 300)
+            plt.show()
+
+        def setup_plot(matrix_size):
+            plt.figure(figsize=(6, 6))
+            plt.xlim(0, matrix_size)
+            plt.ylim(0, matrix_size)
+            if no_ticks:
+                plt.xticks([])
+                plt.yticks([])
+            plt.gca().set_aspect('equal')
+            
+
+        if block and mem[0] is not None:
+            print('Block mode enabled')
+
+            # Perform clustering and sort adjacency matrix
+            comm = ig.VertexClustering(graph, membership=mem)
+            graph.clustering = comm
+            membership = np.array(comm.membership)
+            sorted_indices = np.argsort(membership).astype(int)
+            adjacency_matrix = np.array(graph.get_adjacency().data)
+            adjacency_matrix = adjacency_matrix[sorted_indices][:, sorted_indices]
+
+            # Prepare coordinates and connections
+            matrix_size = adjacency_matrix.shape[0]
+            x_coords, y_coords = np.meshgrid(range(matrix_size), range(matrix_size))
+            x = x_coords.flatten()
+            y = y_coords.flatten()
+            connections = adjacency_matrix.flatten()
+            connected_nodes = np.where(connections > 0)[0]
+            setup_plot(matrix_size)
+
+            # Color normalization based on localization color overlay (LCO)
+            if node_quantity.any():
+                col_vec = 1 - abs(node_quantity[x[connected_nodes]] - node_quantity[y[connected_nodes]])
+                norm = plt.Normalize(vmin=np.min(col_vec), vmax=np.max(col_vec))
+                scatter = plt.scatter(x[connected_nodes], y[connected_nodes], c=col_vec, cmap=colormap, norm=norm, s=2.0)
+            else:
+                scatter = plt.scatter(x[connected_nodes], y[connected_nodes], color='red', s=2.0)
+
+            # Add colorbar
+            cbar = plt.colorbar(scatter, label='LCO')
+            cbar.ax.tick_params(labelsize=15)
+            cbar.set_label('LCO', fontsize=25)
+
+
+            # Save plot with language-specific title
+            if lang == 'eng':
+                save_plot(f'Adjacency Matrix of {label}', f'adjacency_matrix_eng_{label}_clust.{format}')
+            elif lang == 'hu':
+                save_plot(f'{label} hálózat szomszédsági mátrixa', f'adjacency_matrix_hu_{label}_clust.{format}')
+            else:
+                save_plot(f'Adjacency Matrix {label}', f'adjacency_matrix_{label}_clust.{format}')
+
+            return x, y, sorted_indices, membership, connected_nodes
+
+        else:
+            # Non-clustering mode
+            # Extract adjacency matrix
+            adjacency_matrix = np.array(graph.get_adjacency().data)
+            matrix_size = adjacency_matrix.shape[0]
+            x_coords, y_coords = np.meshgrid(range(matrix_size), range(matrix_size))
+            x = x_coords.flatten()
+            y = y_coords.flatten()
+            connections = adjacency_matrix.flatten()
+            connected_nodes = np.where(connections > 0)[0]
+            setup_plot(matrix_size)
+
+            # Scatter plot of adjacency matrix
+            plt.scatter(x[connected_nodes], y[connected_nodes], color='red', s=1.0)
+
+
+            # Save plot with language-specific title
+            if lang == 'eng':
+                save_plot(f'Adjacency Matrix of {label}', f'adjacency_matrix_eng_{label}.{format}')
+            elif lang == 'hu':
+                save_plot(f'{label} hálózat szomszédsági mátrixa', f'adjacency_matrix_hu_{label}.{format}')
+            else:
+                save_plot(f'Adjacency Matrix {label}', f'adjacency_matrix_{label}.{format}')
+
+            return x, y, None, None, connected_nodes
+
 
