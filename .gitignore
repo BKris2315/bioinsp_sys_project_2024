@@ -4,3 +4,5 @@ road_nets/tokyo*
 **/__pycache__
 __pychache__/
 test_imgs
+tmp
+tmp*

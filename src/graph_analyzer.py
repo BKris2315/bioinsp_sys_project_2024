@@ -127,13 +127,16 @@ class NetworkAnalyzer:
     @staticmethod
     def plot_images_from_folder(folder_path: str, 
                                 subplot_ratio: tuple = (4, 3),
+                                add_title: bool = False,
                                 savename: str = None):
         """
         Load images from a folder and plot them as subplots in a specified ratio.
 
         Parameters:
             folder_path (str): Path to the folder containing image files.
+            add_title (bool): Print file name as title for subplot
             subplot_ratio (tuple): Ratio of rows to columns (e.g., (4, 3)).
+            savename (str, optional): File path to save the combined plot image. If None, the plot is not saved.
 
         Returns:
             None
@@ -167,7 +170,8 @@ class NetworkAnalyzer:
             # Display image
             axes[i].imshow(image)
             axes[i].axis('off')
-            axes[i].set_title(os.path.splitext(image_file)[0], fontsize=8)
+            if add_title:
+                axes[i].set_title(os.path.splitext(image_file)[0], fontsize=8)
 
         # Hide remaining empty subplots
         for j in range(i + 1, len(axes)):
@@ -570,5 +574,47 @@ class NetworkAnalyzer:
         else:
             plt.ioff()
             plt.close()
+          
+    @classmethod
+    def process_and_plot_images(cls, main_dir, 
+                                output_dir="./", 
+                                subplot_ratio=(2, 3),
+                                add_title=1):
+        """
+        Recursively process subdirectories, find images, and save plots with the specified naming convention.
+
+        Parameters:
+            main_dir (str): The main directory to start searching for images.
+            output_dir (str): The directory to save the output plots.
+            subplot_ratio (tuple): Ratio of rows to columns for subplots.
+            add_title (bool): Add a title to each subplot (default: 1).
+
+        Returns:
+            None
+        """
+        for root, _, files in os.walk(main_dir):
+            # Filter image files
+            image_files = [f for f in files if f.lower().endswith(('.png', '.jpg', '.jpeg'))]
+
+            # Skip if no image files are found
+            if not image_files:
+                continue
+
+            # Extract subdirectory structure for naming
+            sub_dirs = root.split(os.sep)[1:]  # Skip the main directory itself
+            if len(sub_dirs) < 3:
+                print(f"Skipping {root}, not enough subdirectory levels.")
+                continue
+            
+            # Create output filename based on subdirectory structure
+            output_filename = f"all_graphs_{'_'.join(sub_dirs[:3])}.png"
+            output_path = os.path.join(output_dir, output_filename)
+
+            # Call the plot function
+            print(f"Processing {root} -> Saving to {output_path}")
+            cls.plot_images_from_folder(folder_path=root, 
+                                    savename=output_path, 
+                                    subplot_ratio=subplot_ratio,
+                                    add_title=add_title)
         
 
