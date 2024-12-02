@@ -289,13 +289,14 @@ class NetworkAnalyzer:
     
     @staticmethod
     def plot_adjacency_matrix(graph, 
-                              node_quantity: np.ndarray = None, 
+                              node_quantity: np.ndarray = np.array([None]), 
                               label: str = 'Non', 
                               lang: str = 'eng', 
                               format: str = 'png', 
                               block: int = 0, 
                               mem: np.ndarray = np.array([None]), 
-                              no_ticks: bool = 0):
+                              no_ticks: bool = 0,
+                              savepath: str = 'imgs/'):
         """
         Plots the adjacency matrix of a given graph, with optional clustering and localization color overlay.
 
@@ -308,16 +309,19 @@ class NetworkAnalyzer:
             block (int): If non-zero, enables block plotting with clustering (default: 0).
             mem (numpy.ndarray): Membership array for clustering (default: array([None])).
             no_ticks (bool): If non-zero, removes axis ticks (default: 0).
+            savepath (str): Path to save the plot.
 
         Returns:
             tuple: Contains the x and y coordinates, sorted indices, membership, and connected nodes.
         """
         colormap = plt.cm.copper
 
+        os.makedirs(savepath, exist_ok=True)
+
         def save_plot(title, file_name):
             plt.title(title)
             plt.tight_layout()
-            plt.savefig(file_name, format=format, dpi = 300)
+            plt.savefig(savepath + file_name, format=format, dpi = 300)
             plt.show()
 
         def setup_plot(matrix_size):
@@ -355,13 +359,14 @@ class NetworkAnalyzer:
                 col_vec = 1 - abs(node_quantity[x[connected_nodes]] - node_quantity[y[connected_nodes]])
                 norm = plt.Normalize(vmin=np.min(col_vec), vmax=np.max(col_vec))
                 scatter = plt.scatter(x[connected_nodes], y[connected_nodes], c=col_vec, cmap=colormap, norm=norm, s=2.0)
+                cbar = plt.colorbar(scatter, label='LCO')
+                cbar.ax.tick_params(labelsize=15)
+                cbar.set_label('LCO', fontsize=25)
             else:
                 scatter = plt.scatter(x[connected_nodes], y[connected_nodes], color='red', s=2.0)
 
             # Add colorbar
-            cbar = plt.colorbar(scatter, label='LCO')
-            cbar.ax.tick_params(labelsize=15)
-            cbar.set_label('LCO', fontsize=25)
+            
 
 
             # Save plot with language-specific title
