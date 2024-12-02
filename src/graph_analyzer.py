@@ -3,13 +3,12 @@ while not os.getcwd().endswith('project_2024'):
     print(os.getcwd())
     os.chdir('../')
 
-import time
 import numpy as np
 import igraph as ig
+import distfit as df
 from PIL import Image
-import networkx as nx
-from tqdm import tqdm
 import planarity as pl
+from scipy import stats
 import matplotlib.pyplot as plt
 from typing import Dict, Any, List
 class NetworkAnalyzer:
@@ -22,12 +21,16 @@ class NetworkAnalyzer:
         results = {}
         results["edge_nr"] = graph.ecount()
         results["vertices_nr"] = graph.vcount()
-        results["degree"] = graph.degree()
         results["avg_degree"] = np.mean(graph.degree())
         results["planarity"] = cls.is_graph_planar(graph)
         results["connectedness"] = graph.is_connected()
         results["self_loops"] = cls.has_self_loops(graph)
         results["density"] = graph.density(results["self_loops"])
+        results["degree_centrality"] = cls.calculate_centrality_measures(graph, 'degree')
+        results["betweenness_centrality"] = cls.calculate_centrality_measures(graph, 'betweenness')
+        results["closeness_centrality"] = cls.calculate_centrality_measures(graph, 'closeness')
+        results["eigenvector_centrality"] = cls.calculate_centrality_measures(graph, 'eigenvector')
+
 
         if graph.is_directed():
             results["local_clustering_coeffs"]  = graph.transitivity_local_directed()
@@ -37,6 +40,7 @@ class NetworkAnalyzer:
             results["clustering_coeff"] = graph.transitivity_undirected()
         
         results["nr_of_trinagles"] = len(graph.cliques(min=3, max=3))
+        results["communities_infomap"] = cls.detect_communities(graph, 'infomap')
 
         return results
     
@@ -163,7 +167,7 @@ class NetworkAnalyzer:
             # Display image
             axes[i].imshow(image)
             axes[i].axis('off')
-            axes[i].set_title(image_file, fontsize=8)
+            axes[i].set_title(os.path.splitext(image_file)[0], fontsize=8)
 
         # Hide remaining empty subplots
         for j in range(i + 1, len(axes)):
@@ -257,27 +261,31 @@ class NetworkAnalyzer:
         Returns:
             dict: A dictionary containing centrality measures for all nodes.
         """
+        try:
+            if method == 'degree':
+                centrality = graph.degree()
+            elif method == 'closeness':
+                centrality = graph.closeness(normalized=True)
+            elif method == 'betweenness':
+                centrality = graph.betweenness(vertices=None, directed=False, weights=None, cutoff=None)
+            elif method == 'eigenvector':
+                centrality = graph.eigenvector_centrality(directed=False, scale=True, weights=None, return_eigenvalue=False)
+            elif method == 'pagerank':
+                centrality = graph.pagerank(directed=False, damping=0.85, weights=None, arpack_options=None)
+            elif method == 'harmonic':
+                centrality = graph.harmonic_centrality(vertices=None, mode='ALL', weights=None)
+            elif method == 'load':
+                centrality = cls.calculate_load_centrality(graph)
+            elif method == 'katz':
+                centrality = cls.calculate_katz_centrality(graph)
+            else:
+                raise ValueError(f"Unsupported centrality method: '{method}'. Available methods: degree, closeness, betweenness, eigenvector, pagerank, harmonic, load, katz.")
+            
+            return centrality
+        
+        except Exception as e:
+            raise ValueError(f"Error computing centrality for method '{method}': {str(e)}")
 
-        if method == 'centrality':
-            centrality = graph.degree()
-        elif method == 'closeness':
-            centrality = graph.closeness(normalized=True)
-        elif method == 'betweenness':
-            centrality = graph.betweenness(vertices=None, directed=False, weights=None, cutoff=None)
-        elif method == 'eigenvector':
-            centrality = graph.eigenvector_centrality(directed=False, scale=True, weights=None, return_eigenvalue=False)
-        elif method == 'pagerank':
-            centrality = graph.pagerank(directed=False, damping=0.85, weights=None, arpack_options=None)
-        elif method == 'harmonic':
-            centrality = graph.harmonic_centrality(vertices=None, mode='ALL', weights=None)
-        elif method == 'load':
-            centrality = cls.calculate_load_centrality(graph)
-        elif method == 'katz':
-            centrality = cls.calculate_katz_centrality(graph)
-        else:
-            print(f"Centrality not supported/implemented for {method}")
-
-        return centrality
     
     @staticmethod
     def plot_adjacency_matrix(graph, 
@@ -392,4 +400,170 @@ class NetworkAnalyzer:
 
             return x, y, None, None, connected_nodes
 
+    @staticmethod
+    def detect_communities(graph, method=None, **kwargs):
+        """
+        Apply various community detection algorithms on a graph and return results.
+
+        Parameters:
+            graph (igraph.Graph): The input graph for community detection.
+            method (str): The specific community detection method to use (optional).
+            **kwargs: Additional parameters to customize community detection algorithms.
+                - directed (bool): Whether the graph is directed.
+                - weights (list or None): Edge weights.
+                - vertex_weights (list or None): Vertex weights.
+                - steps (int): Number of steps for the Walktrap algorithm.
+                - trials (int): Number of trials for the Infomap algorithm.
+                - resolution (float): Resolution parameter for the Multilevel algorithm.
+                - spins (int): Number of spins for the Spinglass algorithm.
+
+        Returns:
+            dict or list: A dictionary with method names as keys and membership lists as values,
+                          or a membership list if a specific method is provided.
+
+        Raises:
+            ValueError: If the specified method is not supported or fails.
+        """
+        results = {}
+
+        def run_method(name, func):
+            try:
+                return func()
+            except Exception as e:
+                return f"Failed: {e}"
+
+        directed = kwargs.get('directed', False)
+        weights = kwargs.get('weights', None)
+        vertex_weights = kwargs.get('vertex_weights', None)
+        steps = kwargs.get('steps', 4)
+        trials = kwargs.get('trials', 10)
+        resolution = kwargs.get('resolution', 1.0)
+        spins = kwargs.get('spins', 25)
+
+        methods = {
+            'edge_betweenness': lambda: graph.community_edge_betweenness(directed=directed, weights=weights).as_clustering().membership,
+            'walktrap': lambda: graph.community_walktrap(weights=weights, steps=steps).as_clustering().membership,
+            'infomap': lambda: graph.community_infomap(edge_weights=weights, vertex_weights=vertex_weights, trials=trials).membership,
+            'label_propagation': lambda: graph.community_label_propagation(weights=weights, initial=None, fixed=None).membership,
+            'leading_eigenvector': lambda: graph.community_leading_eigenvector(weights=weights, clusters=None, arpack_options=None).membership,
+            'multilevel': lambda: graph.community_multilevel(weights=weights, resolution=resolution, return_levels=False).membership,
+            'fast_greedy': lambda: graph.community_fastgreedy(weights=weights).as_clustering().membership,
+            'spinglass': lambda: graph.community_spinglass(weights=weights, spins=spins, parupdate=False, start_temp=1.0, stop_temp=0.01, gamma=1.0, update_rule="simple").membership,
+            'optimal_modularity': lambda: graph.community_optimal_modularity(weights=weights).membership
+        }
+
+        if method:
+            if method not in methods:
+                raise ValueError(f"Unsupported community detection method: '{method}'. Available methods: {', '.join(methods.keys())}.")
+            return run_method(method, methods[method])
+
+        for name, func in methods.items():
+            results[name] = run_method(name, func)
+
+        return results
+    
+    @staticmethod
+    def histogram(data, 
+               bins: int = 100, 
+               savename: str = None, 
+               show: bool = 1, 
+               logx: bool = 0, 
+               logy: bool = 0,
+               labelx: str = r'$x$',
+               labely: str = r'$P(x)$', 
+               density: bool = True,
+               distfit_enabled: bool = False,
+               distfit_distr: List[str] = ['norm', 'expon', 'pareto', 't', 'genextreme', 'gamma', 'lognorm', 'beta', 'loggamma'],
+               data_label: str = 'Data',
+               bar_hist: bool = False):
+        
+        """
+        Plot a histogram for the given data.
+
+        Parameters:
+            data (array-like): Input data to be plotted.
+            bins (int): Number of bins in the histogram (default: 100).
+            savename (str): File name to save the plot. If None, the plot is not saved (default: None).
+            show (bool): Whether to display the plot (default: True).
+            logx (bool): Apply logarithmic scaling to the x-axis (default: False).
+            logy (bool): Apply logarithmic scaling to the y-axis (default: False).
+            labelx (str): Label for the x-axis (default: r'$\omega$').
+            labely (str): Label for the y-axis (default: r'$p(\omega)$').
+            density (bool): Normalize the histogram to have a total area of 1 (default: True).
+            distfit_enabled (bool): Whether to enable distfit functionality (default: False).
+            distfit_distr (list): List of distributions for distfit to try (default: None, uses default distfit distributions).
+                All distributions:
+                    ['alpha', 'anglit', 'arcsine', 'beta', 'betaprime', 'bradford', 'burr', 'cauchy', 'chi', 
+                    'chi2', 'cosine', 'dgamma', 'erlang', 'expon', 'exponnorm', 'exponweib', 
+                    'exponpow', 'f', 'fatiguelife', 'fisk', 'foldcauchy', 'foldnorm', 'genlogistic', 
+                    'genpareto', 'gennorm', 'genexpon', 'genextreme', 'gausshyper', 'gamma', 'gengamma', 
+                    'genhalflogistic', 'gibrat', 'gompertz', 'gumbel_r', 'gumbel_l', 'halfcauchy', 
+                    'halflogistic', 'halfnorm', 'halfgennorm', 'hypsecant', 'invgamma', 'invgauss',
+                    'johnsonsb', 'johnsonsu', 'laplace', 'levy', 'logistic', 'loggamma', 
+                    'loglaplace', 'lognorm', 'lomax', 'maxwell', 'mielke', 'nakagami', 'norm', 'pareto', 
+                    'pearson3', 'powerlaw', 'powerlognorm', 'powernorm', 'rdist', 'reciprocal', 'rayleigh', 
+                    'rice', 'recipinvgauss', 'semicircular', 't', 'triang', 'truncexpon', 'truncnorm', 
+                    'uniform', 'vonmises', 'vonmises_line', 'wald', 'wrapcauchy']
+            data_label (str): Label of ythe input data
+            bar_hist (bool): Use bar-style histogram instead of line-style (default: False).
+        """
+        if not isinstance(data, np.ndarray):
+            data = np.asarray(data)
+
+        # exclude NaN values
+        data = data[~np.isnan(data)]
+
+        plt.figure(figsize=(10, 8))
+        
+        # Compute histogram
+        hist, bin_edges = np.histogram(data, bins=bins, density=density)
+        
+        # Plot the histogram
+        if bar_hist:
+            plt.bar(bin_edges[:-1], hist, width=np.diff(bin_edges), 
+                    align='edge', color='r', edgecolor='k', label = data_label)
+        else:
+            plt.plot(bin_edges[:-1], hist, 'ko-', mec='k', mfc ='r', mew=2, lw=2, label = data_label)
+        
+        # Distfit functionality
+        if distfit_enabled:
+            dist = df.distfit(distr=distfit_distr)
+            dist.fit_transform(data, verbose=0)
+            dist.predict(data, verbose=0)
+            best_fit_name = dist.model['name']
+            best_fit_params = dist.model['params']
+
+            # Generate fitted curve
+            x_fit = np.linspace(min(data), max(data), 1000)
+            arg = best_fit_params[:-2]
+            loc = best_fit_params[-2]
+            scale = best_fit_params[-1]
+            distribution = getattr(stats, best_fit_name)
+            y_fit = distribution.pdf(x_fit, loc=loc, scale=scale, *arg)
+
+            # Plot distfit curve
+            plt.plot(x_fit, y_fit, 'limegreen', lw=2, label=f'Fit: {best_fit_name} (loc={round(loc, 2)}, scale={round(scale, 2)})')
+
+        # Apply logarithmic scales if specified
+        if logx:
+            plt.gca().set_xscale("log")
+        if logy:
+            plt.yscale('log')
+        
+        # Set axis labels
+        plt.xlabel(labelx)
+        plt.ylabel(labely)
+        plt.legend()
+        plt.tight_layout()
+        # Save the plot if a file name is provided
+        if savename:
+            plt.savefig(savename, dpi=300)
+        
+        # Show or close the plot
+        if show:
+            plt.show()
+        else:
+            plt.ioff()
+            plt.close()
+        
 
