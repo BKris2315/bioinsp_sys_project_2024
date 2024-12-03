@@ -1,6 +1,5 @@
 import os
 while not os.getcwd().endswith('project_2024'):
-    print(os.getcwd())
     os.chdir('../')
 
 import numpy as np
