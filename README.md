@@ -70,16 +70,13 @@
 ## About The Project
 
 
-There are many great README templates available on GitHub; however, I didn't find one that really suited my needs so I created this enhanced one. I want to create a README template so amazing that it'll be the last one you ever need -- I think this is it.
+## Introduction
 
-Here's why:
-* Your time should be focused on creating something amazing. A project that solves a problem and helps others
-* You shouldn't be doing the same tasks over and over like creating a README from scratch
-* You should implement DRY principles to the rest of your life :smile:
+Synchronization phenomena is fascinating and it occurs in our everyday life, more over it also governs numerous processes. Just think about opinion dynamics, traffic, applause, fireflies' flickering and neurons.
 
-Of course, no one template will serve all projects since your needs may be different. So I'll be adding more in the near future. You may also suggest changes by forking this repo and creating a pull request or opening an issue. Thanks to all the people have contributed to expanding this template!
+For different systems and dynamics several models are implemented and used. One such well-known model is the Kuramoto model. It comes in many flavours, generally building on two major variants, namely the first and second order Kuramoto model.
 
-Use the `BLANK_README.md` to get started.
+In this project I simulate scond order Kuramoto model on different synthetic (SBM, random, Barabasi-Alber, etc.) graphs and on some real world networks (mouse connectome, US power grid), where the application of such model can be motivated from a physical point of view. I will compare the graphs from structural point of view and from synchronisation result perspective.
 
 <p align="right">(<a href="#readme-top">back to top</a>)</p>
 
