@@ -9,7 +9,7 @@ from PIL import Image
 import planarity as pl
 from scipy import stats
 import matplotlib.pyplot as plt
-from typing import Dict, Any, List
+from typing import Dict, Any, List, Union
 class NetworkAnalyzer:
     """
     A class to analyze network properties using igraph.
@@ -75,10 +75,10 @@ class NetworkAnalyzer:
     
     @staticmethod    
     def plot_graph(graph: ig.Graph, layout: str = 'kamada_kawai', 
-                   vertex_size: float = [10],
-                   vertex_color: List[str] = ['red'],
-                   edge_color: List[str] = ['black'],
-                   edge_width: List[float] = [1],
+                   vertex_size: Union[float, List[float]] = [10],
+                   vertex_color: Union[List[float], List[str]] = ['red'],
+                   edge_color: Union[List[float], List[str]] = ['black'],
+                   edge_width: Union[float, List[float]] = [1],
                    vertex_label: List[str] = None,
                    bbox: List[int] = [600,600], 
                    edge_curved: bool = True,
@@ -90,8 +90,8 @@ class NetworkAnalyzer:
             graph (igraph.Graph): The graph to be plotted.
             layout (str): The layout algorithm to use (e.g., 'kamada_kawai', 'fruchterman_reingold', etc.).
             vertex_size (float or List[float]): Size of vertices. Either a single value or a list matching the number of vertices.
-            vertex_color (List[str]): Colors for vertices. Either a single color or a list matching the number of vertices.
-            edge_color (List[str]): Colors for edges. Either a single color or a list matching the number of edges.
+            vertex_color (Union[List[float], List[str]]): Colors for vertices. Either a single color or a list matching the number of vertices.
+            edge_color (Union[List[float], List[str]]): Colors for edges. Either a single color or a list matching the number of edges.
             edge_width (float or List[float]): Width of edges. Either a single value or a list matching the number of edges.
             vertex_label (List[str], optional): Labels for vertices. Either None or a list matching the number of vertices.
             bbox (List[int], optional): Bounding box dimensions for the plot. Defaults to [800,800].
