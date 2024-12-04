@@ -1,0 +1,92 @@
+paths:
+  input:
+    edges: input_data/sbm/edges.dat
+    communities: input_data/sbm/communities.dat
+    self_freqs: null
+    weights: null
+    forcing: null
+  output:
+    root_dir: output/sbm/
+model:
+  equation_params:
+    global_coupling: 5.0
+    damping_coef: 0.1
+    inertia: 1.0
+    cutoff_threshold: 0.7
+  forcing_params:
+    stim_weight: 1.0
+    stim_freq: 0.5
+    forced: false
+  simulation_params:
+    simulation_time_therm: 1000.0
+    simulation_time_dynamics: 1000.0
+    dt: 0.1
+    integration_method_therm: RK45
+    integration_method_dynamics: RK45
+    rtol: 1.0e-10
+    atol: 1.0e-10
+    cut_edge: true
+    realizations: 25
+    decrease_max_cpu_workers: 2
+  communities:
+    do: true
+  kura1: false
+rng:
+  init:
+    frequencies:
+      do: true
+      distr_type: norm
+      scale: 1.0
+      loc: 0.0
+      shape: 1
+    noise:
+      do: true
+      distr_type: norm
+      scale: 0.01
+      loc: 0.0
+      shape: 1
+    phase:
+      distr_type: uniform
+      scale: 0.1
+      loc: 0.0
+      range:
+      - 0
+      - 6.283
+      shape: 1
+    force:
+      do: false
+      distr_type: norm
+      scale: 0.1
+      loc: 0.0
+      range:
+      - 0.0
+      - 6.283
+      shape: 1
+  noise:
+    do: false
+    distr_type: norm
+    scale: 0.01
+    loc: 0.0
+    shape: 1
+  forcing:
+    do: true
+    prob_0: 1.0
+    prob_1: 0.0
+  weights:
+    do: true
+    do_uniform: true
+    distr_type: norm
+    scale: 0.1
+    loc: 0.0
+    shape: 1
+  delays:
+    do: true
+    distr_type: norm
+    scale: 0.1
+    loc: 0.0
+    shape: 1
+save:
+  detailed: false
+  logarithmic: 1.08
+project_name: sbm
+verbose: 1
